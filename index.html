@@ -19,7 +19,7 @@
     <header class="bg-[#131722] border-b border-gray-800 px-6 py-4 flex justify-between items-center shadow-lg">
         <div>
             <h1 class="text-xl font-bold tracking-wider text-blue-400">ASTRA CONTINUUM</h1>
-            <p class="text-xs text-gray-400">Modular Lunar PSR Rover Simulator v1.2.0</p>
+            <p class="text-xs text-gray-400">Modular Lunar PSR Rover Simulator v1.3.0</p>
         </div>
         <div class="flex items-center gap-3">
             <span class="px-3 py-1 bg-gray-900 border border-yellow-600/40 text-yellow-500 rounded text-xs font-mono">
@@ -128,7 +128,6 @@
 
     <!-- Simulation Engine & Application Logic -->
     <script>
-        // Part Registry Specification Definitions
         const PART_REGISTRY = {
             power: {
                 laser_beaming: { name: "Laser Power Beaming Receiver Interface", mass: 15, powerDraw: -150, thermalStability: 200, color: '#10b981' },
@@ -147,6 +146,7 @@
 
         let engine, render, runner;
         let currentRoverComposite = null;
+        let chassisBody = null;
         let activeWheelA = null;
         let activeWheelB = null;
         let drivingForce = 0;
@@ -160,7 +160,6 @@
             container.innerHTML = '';
             spawnedObstacles = [];
 
-            // Instantiate Matter.js Engine with Lunar Gravity (1.62 m/s²)
             engine = Matter.Engine.create();
             engine.gravity.y = 0.165; 
             engine.gravity.x = 0;
@@ -176,13 +175,15 @@
                 }
             });
 
-            // Construct Lunar Crater Surface Topology
+            // Extended 3000px Lunar Crater Surface Topology
+            const worldWidth = 3000;
             const terrainPoints = [
-                { x: 0, y: height - 40 },
-                { x: width * 0.3, y: height - 60 },
-                { x: width * 0.6, y: height - 160 },
-                { x: width * 0.8, y: height - 70 },
-                { x: width, y: height - 30 }
+                { x: 0, y: height - 60 },
+                { x: 400, y: height - 80 },
+                { x: 1000, y: height - 250 }, // Deep PSR Crater Slope
+                { x: 1600, y: height - 320 }, // Bottom of PSR Basin
+                { x: 2200, y: height - 120 }, // Crater Rim Ascent
+                { x: worldWidth, y: height - 50 }
             ];
 
             for (let i = 0; i < terrainPoints.length - 1; i++) {
@@ -193,7 +194,7 @@
                 const len = Math.hypot(pt2.x - pt1.x, pt2.y - pt1.y);
                 const angle = Math.atan2(pt2.y - pt1.y, pt2.x - pt1.x);
 
-                const segment = Matter.Bodies.rectangle(xc, yc, len + 10, 40, {
+                const segment = Matter.Bodies.rectangle(xc, yc, len + 10, 50, {
                     isStatic: true,
                     friction: 0.9,
                     render: { fillStyle: '#1e2330' }
@@ -210,6 +211,24 @@
             setupObstacleSpawners(container);
             updateRoverSpecs();
             deployRover();
+
+            // Camera Follow Loop (Smooth Pan)
+            Matter.Events.on(engine, 'beforeUpdate', function() {
+                if (chassisBody) {
+                    const targetX = chassisBody.position.x;
+                    const currentCenterX = (render.bounds.min.x + render.bounds.max.x) / 2;
+                    const diff = targetX - currentCenterX;
+
+                    // Smooth interpolation (lerp) for camera pan
+                    render.bounds.min.x += diff * 0.1;
+                    render.bounds.max.x += diff * 0.1;
+                }
+
+                if (activeWheelA && activeWheelB) {
+                    Matter.Body.setAngularVelocity(activeWheelA, drivingForce);
+                    Matter.Body.setAngularVelocity(activeWheelB, drivingForce);
+                }
+            });
         }
 
         function updateRoverSpecs() {
@@ -245,6 +264,10 @@
                 Matter.Composite.remove(engine.world, currentRoverComposite);
             }
 
+            // Reset camera position on deploy
+            render.bounds.min.x = 0;
+            render.bounds.max.x = render.options.width;
+
             const mId = document.getElementById('mobilitySelect').value;
             const pId = document.getElementById('powerSelect').value;
             const mSpec = PART_REGISTRY.mobility[mId];
@@ -255,7 +278,7 @@
 
             currentRoverComposite = Matter.Composite.create({ label: 'Rover' });
 
-            const chassis = Matter.Bodies.rectangle(startX, startY, 120, 35, {
+            chassisBody = Matter.Bodies.rectangle(startX, startY, 120, 35, {
                 friction: 0.5,
                 density: 0.001,
                 render: { fillStyle: '#e2e8f0', strokeStyle: '#64748b', lineWidth: 2 }
@@ -283,21 +306,14 @@
                 render: { fillStyle: mSpec.color, strokeStyle: '#ffffff', lineWidth: 2 }
             });
 
-            const weldPower = Matter.Constraint.create({ bodyA: chassis, bodyB: powerCore, pointA: {x: -25, y: -15}, pointB: {x: 0, y: 0}, stiffness: 1, render: {visible: false} });
-            const weldMast = Matter.Constraint.create({ bodyA: chassis, bodyB: sensorMast, pointA: {x: 35, y: -15}, pointB: {x: 0, y: 15}, stiffness: 1, render: {visible: false} });
+            const weldPower = Matter.Constraint.create({ bodyA: chassisBody, bodyB: powerCore, pointA: {x: -25, y: -15}, pointB: {x: 0, y: 0}, stiffness: 1, render: {visible: false} });
+            const weldMast = Matter.Constraint.create({ bodyA: chassisBody, bodyB: sensorMast, pointA: {x: 35, y: -15}, pointB: {x: 0, y: 15}, stiffness: 1, render: {visible: false} });
 
-            const axleA = Matter.Constraint.create({ bodyA: chassis, bodyB: activeWheelA, pointA: { x: -40, y: 15 }, pointB: { x: 0, y: 0 }, stiffness: 0.3, damping: 0.7, render: { strokeStyle: '#3b82f6', width: 3 } });
-            const axleB = Matter.Constraint.create({ bodyA: chassis, bodyB: activeWheelB, pointA: { x: 40, y: 15 }, pointB: { x: 0, y: 0 }, stiffness: 0.3, damping: 0.7, render: { strokeStyle: '#3b82f6', width: 3 } });
+            const axleA = Matter.Constraint.create({ bodyA: chassisBody, bodyB: activeWheelA, pointA: { x: -40, y: 15 }, pointB: { x: 0, y: 0 }, stiffness: 0.3, damping: 0.7, render: { strokeStyle: '#3b82f6', width: 3 } });
+            const axleB = Matter.Constraint.create({ bodyA: chassisBody, bodyB: activeWheelB, pointA: { x: 40, y: 15 }, pointB: { x: 0, y: 0 }, stiffness: 0.3, damping: 0.7, render: { strokeStyle: '#3b82f6', width: 3 } });
 
-            Matter.Composite.add(currentRoverComposite, [chassis, powerCore, sensorMast, activeWheelA, activeWheelB, weldPower, weldMast, axleA, axleB]);
+            Matter.Composite.add(currentRoverComposite, [chassisBody, powerCore, sensorMast, activeWheelA, activeWheelB, weldPower, weldMast, axleA, axleB]);
             Matter.Composite.add(engine.world, currentRoverComposite);
-
-            Matter.Events.on(engine, 'beforeUpdate', function() {
-                if (activeWheelA && activeWheelB) {
-                    Matter.Body.setAngularVelocity(activeWheelA, drivingForce);
-                    Matter.Body.setAngularVelocity(activeWheelB, drivingForce);
-                }
-            });
         }
 
         function setupDriverControls() {
@@ -314,10 +330,14 @@
         function setupObstacleSpawners(container) {
             container.addEventListener('mousedown', (e) => {
                 const rect = render.canvas.getBoundingClientRect();
-                const clickX = e.clientX - rect.left;
-                const clickY = e.clientY - rect.top;
+                const screenX = e.clientX - rect.left;
+                const screenY = e.clientY - rect.top;
 
-                const boulder = Matter.Bodies.polygon(clickX, clickY, 6, Math.floor(Math.random() * 15) + 12, {
+                // Convert screen coordinates to world coordinates accounting for camera pan bounds
+                const worldX = screenX + render.bounds.min.x;
+                const worldY = screenY + render.bounds.min.y;
+
+                const boulder = Matter.Bodies.polygon(worldX, worldY, 6, Math.floor(Math.random() * 15) + 12, {
                     friction: 0.8,
                     density: 0.005,
                     render: { fillStyle: '#64748b', strokeStyle: '#475569', lineWidth: 1 }
