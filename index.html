@@ -4,132 +4,363 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Astra Continuum - Lunar PSR Rover Constructor</title>
-    <!-- Tailwind CSS and Matter.js CDN links -->
-    <script src="https://tailwindcss.com"></script>
-    <script src="https://cloudflare.com"></script>
+    <!-- Tailwind CSS for modern interface styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Matter.js for 2D physics simulation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <style>
-        body { background-color: #0d0f12; color: #e2e8f0; font-family: system-ui, sans-serif; }
+        body { background-color: #0d0f12; color: #e2e8f0; font-family: system-ui, -apple-system, sans-serif; }
         canvas { background: radial-gradient(circle at 50% 30%, #1a1f29 0%, #080a0f 100%); border-radius: 0.5rem; cursor: crosshair; }
     </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden">
-    <!-- Header and main UI layout with telemetry and controls -->
+
+    <!-- Top Navigation Header -->
     <header class="bg-[#131722] border-b border-gray-800 px-6 py-4 flex justify-between items-center shadow-lg">
         <div>
             <h1 class="text-xl font-bold tracking-wider text-blue-400">ASTRA CONTINUUM</h1>
-            <p class="text-xs text-gray-400">Modular Lunar PSR Rover Simulator v1.1.0</p>
+            <p class="text-xs text-gray-400">Modular Lunar PSR Rover Simulator v1.2.0</p>
         </div>
-        <div class="flex items-center gap-4">
-            <span class="px-3 py-1 bg-gray-900 border border-yellow-600/40 text-yellow-500 rounded text-xs font-mono">🪐 ENVIRONMENT: MOON PSR (-253°C)</span>
-            <span class="px-3 py-1 bg-gray-900 border border-blue-600/40 text-blue-400 rounded text-xs font-mono hidden md:inline">🎮 CONTROLS: A/D OR ARROWS</span>
-            <span class="px-3 py-1 bg-gray-900 border border-purple-600/40 text-purple-400 rounded text-xs font-mono hidden lg:inline">🪨 CLICK TO SPAWN BOULDERS</span>
+        <div class="flex items-center gap-3">
+            <span class="px-3 py-1 bg-gray-900 border border-yellow-600/40 text-yellow-500 rounded text-xs font-mono">
+                🪐 MOON PSR (-253°C)
+            </span>
+            <span class="px-3 py-1 bg-gray-900 border border-blue-600/40 text-blue-400 rounded text-xs font-mono hidden md:inline">
+                🎮 DRIVE: A/D or ARROWS
+            </span>
+            <span class="px-3 py-1 bg-gray-900 border border-purple-600/40 text-purple-400 rounded text-xs font-mono hidden lg:inline">
+                🪨 CLICK TO SPAWN BOULDERS
+            </span>
         </div>
     </header>
+
+    <!-- Main Workspace Dashboard -->
     <main class="flex-1 flex overflow-hidden">
+        
+        <!-- Left Panel: Modular Configuration Interface -->
         <section class="w-full md:w-1/3 bg-[#131722] border-r border-gray-800 p-6 flex flex-col gap-6 overflow-y-auto">
-            <h2 class="text-lg font-semibold text-white mb-2">Module Blueprint Configuration</h2>
+            <div>
+                <h2 class="text-lg font-semibold text-white mb-1">Module Blueprint Configuration</h2>
+                <p class="text-xs text-gray-400">Configure rover modules to balance mass, thermal preservation, and power budgets.</p>
+            </div>
+
+            <!-- Subsystem Swapping Blocks -->
             <div class="space-y-4">
+                <!-- Power Subsystem -->
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">1. Primary Power Source</label>
-                    <select id="powerSelect" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-sm text-white" onchange="updateRoverSpecs()">
-                        <option value="rtg_nuclear">Radioisotope Thermoelectric Gen (RTG)</option>
-                        <option value="li_ion_dense">High-Density Cryo Battery Pack</option>
+                    <select id="powerSelect" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-sm text-white focus:border-blue-500 focus:outline-none" onchange="updateRoverSpecs()">
+                        <option value="laser_beaming">Laser Power Beaming Receiver Interface [+15kg, -150W]</option>
+                        <option value="rtg_nuclear">Radioisotope Thermoelectric Gen (RTG) [+45kg, -120W]</option>
+                        <option value="li_ion_dense">High-Density Cryo Battery Pack [+20kg, +40W]</option>
                     </select>
                 </div>
+
+                <!-- Mobility Subsystem -->
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">2. Wheel & Locomotion Geometry</label>
-                    <select id="mobilitySelect" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-sm text-white" onchange="updateRoverSpecs()">
-                        <option value="mesh_titanium">Flexible Titanium Mesh Tires</option>
-                        <option value="rubber_solid">Solid Cryo-Rubber Tracks</option>
+                    <select id="mobilitySelect" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-sm text-white focus:border-blue-500 focus:outline-none" onchange="updateRoverSpecs()">
+                        <option value="mesh_titanium">Flexible Titanium Mesh Tires [+15kg, +30W]</option>
+                        <option value="rubber_solid">Solid Cryo-Rubber Tracks [+35kg, +75W]</option>
                     </select>
                 </div>
+
+                <!-- Science Payload -->
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">3. Scientific Payload Suite</label>
-                    <select id="payloadSelect" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-sm text-white" onchange="updateRoverSpecs()">
-                        <option value="spectrometer_drill">Neutron Spectrometer & Cryo Drill</option>
-                        <option value="lidar_basic">Active LiDAR & Optical Navigation Array</option>
+                    <select id="payloadSelect" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-sm text-white focus:border-blue-500 focus:outline-none" onchange="updateRoverSpecs()">
+                        <option value="piezo_corer">Ultrasonic Piezoelectric Corer [+35kg, +60W]</option>
+                        <option value="lidar_basic">Active LiDAR & Optical Navigation Array [+10kg, +15W]</option>
                     </select>
                 </div>
             </div>
+
+            <!-- Live Telemetry Budget Monitor -->
             <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 mt-auto">
                 <h3 class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Live Mission Telemetry</h3>
                 <div class="grid grid-cols-2 gap-4 text-sm font-mono">
-                    <div><p class="text-gray-500 text-xs">TOTAL MASS</p><p id="metricMass" class="text-lg font-bold text-white">0 kg</p></div>
-                    <div><p class="text-gray-500 text-xs">POWER</p><p id="metricPower" class="text-lg font-bold text-emerald-400">0 W</p></div>
-                    <div><p class="text-gray-500 text-xs">THERMAL</p><p id="metricThermal" class="text-lg font-bold text-orange-400">0°C</p></div>
-                    <div><p class="text-gray-500 text-xs">STATUS</p><p id="metricStatus" class="text-lg font-bold text-blue-400">PASSED</p></div>
+                    <div>
+                        <p class="text-gray-500 text-xs">TOTAL MASS</p>
+                        <p id="metricMass" class="text-lg font-bold text-white">0 kg</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500 text-xs">NET POWER</p>
+                        <p id="metricPower" class="text-lg font-bold text-emerald-400">0 W</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500 text-xs">THERMAL RATING</p>
+                        <p id="metricThermal" class="text-lg font-bold text-orange-400">0°C</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500 text-xs">MISSION STATUS</p>
+                        <p id="metricStatus" class="text-lg font-bold text-blue-400">PASSED</p>
+                    </div>
                 </div>
             </div>
         </section>
+
+        <!-- Right Panel: Physics Simulator Viewport -->
         <section class="flex-1 p-6 flex flex-col gap-4 bg-[#0a0d14]">
             <div class="flex justify-between items-center">
-                <h2 class="text-lg font-semibold text-white">PSR Environment Physics Sandbox</h2>
+                <div>
+                    <h2 class="text-lg font-semibold text-white">PSR Environment Physics Sandbox</h2>
+                    <p class="text-xs text-gray-400">Simulating operations down crater slopes under 1.62 m/s² lunar gravity.</p>
+                </div>
                 <div class="flex gap-2">
-                    <button onclick="deployRover()" class="bg-blue-600 hover:bg-blue-500 text-white text-sm px-4 py-2 rounded-lg">Deploy Rover</button>
-                    <button onclick="exportBlueprintConfiguration()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-sm px-4 py-2 rounded-lg">Save JSON</button>
-                    <button onclick="resetSimulation()" class="bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm px-4 py-2 rounded-lg">Reset</button>
+                    <button onclick="deployRover()" class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-4 py-2 rounded-lg transition shadow-md">
+                        🚀 Deploy Rover
+                    </button>
+                    <button onclick="exportBlueprintConfiguration()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold px-4 py-2 rounded-lg transition shadow-md border border-emerald-700">
+                        💾 Save JSON
+                    </button>
+                    <button onclick="resetSimulation()" class="bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm font-semibold px-4 py-2 rounded-lg transition border border-gray-700">
+                        🔄 Reset
+                    </button>
                 </div>
             </div>
-            <div id="canvasContainer" class="flex-1 w-full relative flex items-center justify-center"></div>
+
+            <!-- Interactive Canvas Container -->
+            <div id="canvasContainer" class="flex-1 w-full relative flex items-center justify-center">
+                <!-- Physics canvas renders here dynamically -->
+            </div>
         </section>
     </main>
+
+    <!-- Simulation Engine & Application Logic -->
     <script>
-        // Full simulation scripts, event listeners, and Matter.js bindings are maintained in this block.
+        // Part Registry Specification Definitions
         const PART_REGISTRY = {
-            power: { rtg_nuclear: { mass: 45, powerDraw: -120, thermalStability: 280, color: '#f59e0b' }, li_ion_dense: { mass: 20, powerDraw: 40, thermalStability: -40, color: '#3b82f6' } },
-            mobility: { mesh_titanium: { mass: 15, powerDraw: 30, friction: 0.9, radius: 24, color: '#94a3b8' }, rubber_solid: { mass: 35, powerDraw: 75, friction: 0.6, radius: 20, color: '#475569' } },
-            payload: { spectrometer_drill: { mass: 35, powerDraw: 60, thermalStability: 50, color: '#a855f7' }, lidar_basic: { mass: 10, powerDraw: 15, thermalStability: 10, color: '#ec4899' } }
+            power: {
+                laser_beaming: { name: "Laser Power Beaming Receiver Interface", mass: 15, powerDraw: -150, thermalStability: 200, color: '#10b981' },
+                rtg_nuclear: { name: "Radioisotope Thermoelectric Gen (RTG)", mass: 45, powerDraw: -120, thermalStability: 280, color: '#f59e0b' },
+                li_ion_dense: { name: "High-Density Cryo Battery Pack", mass: 20, powerDraw: 40, thermalStability: -40, color: '#3b82f6' }
+            },
+            mobility: {
+                mesh_titanium: { name: "Flexible Titanium Mesh Tires", mass: 15, powerDraw: 30, friction: 0.9, radius: 24, color: '#94a3b8' },
+                rubber_solid: { name: "Solid Cryo-Rubber Tracks", mass: 35, powerDraw: 75, friction: 0.6, radius: 20, color: '#475569' }
+            },
+            payload: {
+                piezo_corer: { name: "Ultrasonic Piezoelectric Corer", mass: 35, powerDraw: 60, thermalStability: 50, color: '#a855f7' },
+                lidar_basic: { name: "Active LiDAR & Optical Navigation Array", mass: 10, powerDraw: 15, thermalStability: 10, color: '#ec4899' }
+            }
         };
-        let engine, render, runner, currentRoverComposite = null, activeWheelA = null, activeWheelB = null, drivingForce = 0, spawnedObstacles = [];
-        
+
+        let engine, render, runner;
+        let currentRoverComposite = null;
+        let activeWheelA = null;
+        let activeWheelB = null;
+        let drivingForce = 0;
+        let spawnedObstacles = [];
+
         function initSimulation() {
             const container = document.getElementById('canvasContainer');
-            const width = container.clientWidth || 800; const height = container.clientHeight || 450;
-            container.innerHTML = ''; spawnedObstacles = [];
-            engine = Matter.Engine.create(); engine.gravity.y = 0.165;
-            render = Matter.Render.create({ element: container, engine: engine, options: { width, height, wireframes: false, background: 'transparent' } });
-            
-            const terrain = Matter.Bodies.rectangle(width/2, height - 20, width, 40, { isStatic: true, friction: 0.9, render: { fillStyle: '#1e2330' } });
-            Matter.Composite.add(engine.world, terrain);
-            runner = Matter.Runner.create(); Matter.Render.run(render); Matter.Runner.run(runner, engine);
-            
+            const width = container.clientWidth || 800;
+            const height = container.clientHeight || 450;
+
+            container.innerHTML = '';
+            spawnedObstacles = [];
+
+            // Instantiate Matter.js Engine with Lunar Gravity (1.62 m/s²)
+            engine = Matter.Engine.create();
+            engine.gravity.y = 0.165; 
+            engine.gravity.x = 0;
+
+            render = Matter.Render.create({
+                element: container,
+                engine: engine,
+                options: {
+                    width: width,
+                    height: height,
+                    wireframes: false,
+                    background: 'transparent'
+                }
+            });
+
+            // Construct Lunar Crater Surface Topology
+            const terrainPoints = [
+                { x: 0, y: height - 40 },
+                { x: width * 0.3, y: height - 60 },
+                { x: width * 0.6, y: height - 160 },
+                { x: width * 0.8, y: height - 70 },
+                { x: width, y: height - 30 }
+            ];
+
+            for (let i = 0; i < terrainPoints.length - 1; i++) {
+                const pt1 = terrainPoints[i];
+                const pt2 = terrainPoints[i+1];
+                const xc = (pt1.x + pt2.x) / 2;
+                const yc = (pt1.y + pt2.y) / 2;
+                const len = Math.hypot(pt2.x - pt1.x, pt2.y - pt1.y);
+                const angle = Math.atan2(pt2.y - pt1.y, pt2.x - pt1.x);
+
+                const segment = Matter.Bodies.rectangle(xc, yc, len + 10, 40, {
+                    isStatic: true,
+                    friction: 0.9,
+                    render: { fillStyle: '#1e2330' }
+                });
+                Matter.Body.setAngle(segment, angle);
+                Matter.Composite.add(engine.world, segment);
+            }
+
+            runner = Matter.Runner.create();
+            Matter.Render.run(render);
+            Matter.Runner.run(runner, engine);
+
             setupDriverControls();
             setupObstacleSpawners(container);
             updateRoverSpecs();
             deployRover();
         }
+
         function updateRoverSpecs() {
-            document.getElementById('metricMass').innerText = "190 kg";
-            document.getElementById('metricPower').innerText = "-30 Watts";
-            document.getElementById('metricThermal').innerText = "330 °C";
+            const pId = document.getElementById('powerSelect').value;
+            const mId = document.getElementById('mobilitySelect').value;
+            const lId = document.getElementById('payloadSelect').value;
+
+            const pSpec = PART_REGISTRY.power[pId];
+            const mSpec = PART_REGISTRY.mobility[mId];
+            const lSpec = PART_REGISTRY.payload[lId];
+
+            const structuralBaseMass = 100; 
+            const totalMass = structuralBaseMass + pSpec.mass + (mSpec.mass * 2) + lSpec.mass;
+            const netPowerDraw = pSpec.powerDraw + mSpec.powerDraw + lSpec.powerDraw;
+            const thermalBuffer = pSpec.thermalStability + lSpec.thermalStability;
+
+            document.getElementById('metricMass').innerText = `${totalMass} kg`;
+            document.getElementById('metricPower').innerText = `${netPowerDraw} W`;
+            document.getElementById('metricThermal').innerText = `${thermalBuffer} °C`;
+
+            const statusText = document.getElementById('metricStatus');
+            if (netPowerDraw > 150 || thermalBuffer < 0) {
+                statusText.innerText = "CRITICAL FAIL";
+                statusText.className = "text-lg font-bold text-red-500";
+            } else {
+                statusText.innerText = "FLIGHT READY";
+                statusText.className = "text-lg font-bold text-emerald-400";
+            }
         }
+
         function deployRover() {
-            if (currentRoverComposite) Matter.Composite.remove(engine.world, currentRoverComposite);
-            currentRoverComposite = Matter.Composite.create();
-            const chassis = Matter.Bodies.rectangle(120, 60, 115, 30);
-            activeWheelA = Matter.Bodies.circle(80, 82, 24);
-            activeWheelB = Matter.Bodies.circle(160, 82, 24);
-            Matter.Composite.add(currentRoverComposite, [chassis, activeWheelA, activeWheelB]);
+            if (currentRoverComposite) {
+                Matter.Composite.remove(engine.world, currentRoverComposite);
+            }
+
+            const mId = document.getElementById('mobilitySelect').value;
+            const pId = document.getElementById('powerSelect').value;
+            const mSpec = PART_REGISTRY.mobility[mId];
+            const pSpec = PART_REGISTRY.power[pId];
+
+            const startX = 150;
+            const startY = 80;
+
+            currentRoverComposite = Matter.Composite.create({ label: 'Rover' });
+
+            const chassis = Matter.Bodies.rectangle(startX, startY, 120, 35, {
+                friction: 0.5,
+                density: 0.001,
+                render: { fillStyle: '#e2e8f0', strokeStyle: '#64748b', lineWidth: 2 }
+            });
+
+            const powerCore = Matter.Bodies.rectangle(startX - 25, startY - 25, 35, 25, {
+                density: 0.001,
+                render: { fillStyle: pSpec.color }
+            });
+
+            const sensorMast = Matter.Bodies.rectangle(startX + 35, startY - 30, 8, 40, {
+                density: 0.0005,
+                render: { fillStyle: '#475569' }
+            });
+
+            activeWheelA = Matter.Bodies.circle(startX - 40, startY + 25, mSpec.radius, {
+                friction: mSpec.friction,
+                density: 0.002,
+                render: { fillStyle: mSpec.color, strokeStyle: '#ffffff', lineWidth: 2 }
+            });
+
+            activeWheelB = Matter.Bodies.circle(startX + 40, startY + 25, mSpec.radius, {
+                friction: mSpec.friction,
+                density: 0.002,
+                render: { fillStyle: mSpec.color, strokeStyle: '#ffffff', lineWidth: 2 }
+            });
+
+            const weldPower = Matter.Constraint.create({ bodyA: chassis, bodyB: powerCore, pointA: {x: -25, y: -15}, pointB: {x: 0, y: 0}, stiffness: 1, render: {visible: false} });
+            const weldMast = Matter.Constraint.create({ bodyA: chassis, bodyB: sensorMast, pointA: {x: 35, y: -15}, pointB: {x: 0, y: 15}, stiffness: 1, render: {visible: false} });
+
+            const axleA = Matter.Constraint.create({ bodyA: chassis, bodyB: activeWheelA, pointA: { x: -40, y: 15 }, pointB: { x: 0, y: 0 }, stiffness: 0.3, damping: 0.7, render: { strokeStyle: '#3b82f6', width: 3 } });
+            const axleB = Matter.Constraint.create({ bodyA: chassis, bodyB: activeWheelB, pointA: { x: 40, y: 15 }, pointB: { x: 0, y: 0 }, stiffness: 0.3, damping: 0.7, render: { strokeStyle: '#3b82f6', width: 3 } });
+
+            Matter.Composite.add(currentRoverComposite, [chassis, powerCore, sensorMast, activeWheelA, activeWheelB, weldPower, weldMast, axleA, axleB]);
             Matter.Composite.add(engine.world, currentRoverComposite);
+
+            Matter.Events.on(engine, 'beforeUpdate', function() {
+                if (activeWheelA && activeWheelB) {
+                    Matter.Body.setAngularVelocity(activeWheelA, drivingForce);
+                    Matter.Body.setAngularVelocity(activeWheelB, drivingForce);
+                }
+            });
         }
+
         function setupDriverControls() {
-            window.addEventListener('keydown', (e) => { if (e.key.toLowerCase() === 'd') drivingForce = 0.05; if (e.key.toLowerCase() === 'a') drivingForce = -0.05; });
-            window.addEventListener('keyup', () => { drivingForce = 0; });
+            window.addEventListener('keydown', (e) => {
+                if (e.key.toLowerCase() === 'd' || e.key === 'ArrowRight') drivingForce = 0.05;
+                if (e.key.toLowerCase() === 'a' || e.key === 'ArrowLeft') drivingForce = -0.05;
+            });
+
+            window.addEventListener('keyup', (e) => {
+                if (['d', 'a', 'arrowright', 'arrowleft'].includes(e.key.toLowerCase())) drivingForce = 0;
+            });
         }
+
         function setupObstacleSpawners(container) {
             container.addEventListener('mousedown', (e) => {
                 const rect = render.canvas.getBoundingClientRect();
-                const boulder = Matter.Bodies.polygon(e.clientX - rect.left, e.clientY - rect.top, 6, 20, { render: { fillStyle: '#4b5563' } });
-                spawnedObstacles.push(boulder); Matter.Composite.add(engine.world, boulder);
+                const clickX = e.clientX - rect.left;
+                const clickY = e.clientY - rect.top;
+
+                const boulder = Matter.Bodies.polygon(clickX, clickY, 6, Math.floor(Math.random() * 15) + 12, {
+                    friction: 0.8,
+                    density: 0.005,
+                    render: { fillStyle: '#64748b', strokeStyle: '#475569', lineWidth: 1 }
+                });
+
+                spawnedObstacles.push(boulder);
+                Matter.Composite.add(engine.world, boulder);
             });
         }
+
         function exportBlueprintConfiguration() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ boulders: spawnedObstacles.length }, null, 4));
-            const anchor = document.createElement('a'); anchor.setAttribute("href", dataStr); anchor.setAttribute("download", "manifest.json");
-            document.body.appendChild(anchor); anchor.click(); anchor.remove();
+            const pId = document.getElementById('powerSelect').value;
+            const mId = document.getElementById('mobilitySelect').value;
+            const lId = document.getElementById('payloadSelect').value;
+
+            const blueprint = {
+                missionName: "Astra Continuum Surface Survey",
+                timestamp: new Date().toISOString(),
+                targetEnvironment: "Lunar South Pole PSR",
+                hardwareSpecifications: {
+                    primaryPowerSource: PART_REGISTRY.power[pId].name,
+                    mobilityGeometry: PART_REGISTRY.mobility[mId].name,
+                    scientificPayloadSuite: PART_REGISTRY.payload[lId].name
+                },
+                spawnedObstacleCount: spawnedObstacles.length
+            };
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(blueprint, null, 4));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "astra_continuum_rover_manifest.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
         }
-        function resetSimulation() { initSimulation(); }
-        window.addEventListener('DOMContentLoaded', () => setTimeout(initSimulation, 300));
+
+        function resetSimulation() {
+            initSimulation();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(initSimulation, 300);
+        });
     </script>
 </body>
 </html>
